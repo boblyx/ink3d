@@ -1,0 +1,9 @@
+{
+	"input_path": "./samples/cubes.stl",
+	"output_path": "./output.svg",
+	"view_origin": [1,1,1],
+	"look_at": [0,0,0],
+	"projection": "perspective",
+	"samples": 108,
+	"refine_steps": 108
+}

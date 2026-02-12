@@ -17,11 +17,9 @@ Simple cpp application to render an input 3d file (.off, .obj, .stl etc) as a SV
 
 ## Usage
 ```bash
-ink3d <3d model file path>
+ink3d path/to/config.json
 # e.g.,
-# ink3d samples/cubes.stl
+# ink3d samples/config.json
 ```
-After running the above command, an `output.svg` will appear in the same folder
-
-## Limitations
-- View angle is currently fixed and only views from points `[1,1,1]` to `[0,0,0]`.
+After running the above command, an svg file will appear according to the
+configuration file supplied. See samples/config.json for an example.

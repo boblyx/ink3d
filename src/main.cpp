@@ -5,19 +5,22 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <cmath>
-#include <limits>
-#include <variant>
-#include <optional>
 
 #include "common.h"
 #include "visibility.h"
 #include "projection.h"
+#include "config.h"
 using namespace Ink3d;
 
 int main(int argc, char* argv[]) {
-    const std::string filename = (argc > 1) ? argv[1] : "input.off";
-    const std::string svg_filename = "output.svg";
+    Config cnf; 
+    if(loadConfig(argv[1], cnf)){
+        std::cout << cnf.input_path << std::endl;
+    } else {
+        std::cout << "Failed to load config" << std::endl;
+    }
+    const std::string filename = cnf.input_path;
+    const std::string svg_filename = cnf.output_path;
 
     Mesh mesh;
     if(!CGAL::IO::read_polygon_mesh(filename, mesh)) {
@@ -26,8 +29,8 @@ int main(int argc, char* argv[]) {
     }
 
     // 1. Setup Camera
-    Point_3 eye(1, 1, 1);
-    Point_3 center(0, 0, 0);
+    Point_3 eye = cnf.view_origin;
+    Point_3 center = cnf.look_at;
     Vector_3 up(0, 0, 1); // Z-up world
     
     // View transform: World -> Camera
@@ -60,7 +63,8 @@ int main(int argc, char* argv[]) {
         // compute visible parts in WORLD space
         auto parts = visible_subsegments_world(
             eye, source, target, tree, ignore_faces,
-            /*samples*/ 108, /*refine_steps*/ 108
+            cnf.samples , 
+            cnf.refine_steps
         );
 
         for (auto& wseg : parts) {
@@ -126,6 +130,5 @@ int main(int argc, char* argv[]) {
 
     svg << "</svg>";
     std::cout << "Successfully wrote " << lines_2d.size() << " visible edges to " << svg_filename << std::endl;
-
     return 0;
 }
