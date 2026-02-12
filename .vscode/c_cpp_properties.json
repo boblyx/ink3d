@@ -7,6 +7,9 @@
                 "~/.conan2/**",
                 "${workspaceFolder}/include"
             ],
+            "forcedInclude": [
+                "${workspaceFolder}/include/pch.h"
+            ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "c17",

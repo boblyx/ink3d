@@ -2,7 +2,6 @@
 #define PROJECTION_H
 
 #include "common.h"
-#include <CGAL/Aff_transformation_3.h>
 
 CGAL::Aff_transformation_3<Ink3d::K> look_at_transform(const Ink3d::Point_3& eye, const Ink3d::Point_3& center, const Ink3d::Vector_3& up);
 

@@ -2,12 +2,6 @@
  * projection.cpp
  */
 
-#include <vector>
-#include <cmath>
-#include <limits>
-#include <variant>
-#include <optional>
-#include <CGAL/Aff_transformation_3.h>
 #include "common.h"
 
 using namespace Ink3d;

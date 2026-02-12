@@ -1,7 +1,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include <string>
 #include "common.h"
 
 bool loadConfig(const std::string& filename, Ink3d::Config& config);

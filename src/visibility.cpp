@@ -1,13 +1,6 @@
 /**
  * visiblity.cpp
  */
-
-#include <vector>
-#include <cmath>
-#include <limits>
-#include <variant>
-#include <optional>
-
 #include "common.h"
 using namespace Ink3d;
 

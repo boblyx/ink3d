@@ -2,10 +2,6 @@
  * main.cpp
  */
 
-#include <iostream>
-#include <fstream>
-#include <vector>
-
 #include "common.h"
 #include "visibility.h"
 #include "projection.h"
@@ -92,8 +88,15 @@ int main(int argc, char* argv[]) {
     std::vector<std::pair<std::pair<double, double>, std::pair<double, double>>> lines_2d;
 
     for (const auto& seg : visible_segments_camera_space) {
-        auto uv1 = project_perspective(seg.first);
-        auto uv2 = project_perspective(seg.second);
+        std::pair<double, double> uv1;
+        std::pair<double, double> uv2;
+        if (cnf.projection == ProjectionType::Orthographic){
+            uv1 = {seg.first.x(), seg.first.y()};
+            uv2 = {seg.second.x(), seg.second.y()};
+        }else{
+            uv1 = project_perspective(seg.first);
+            uv2 = project_perspective(seg.second);
+        }
 
         // Flip Y for SVG (SVG coords: Y down, Camera coords: Y up)
         uv1.second = -uv1.second;
