@@ -12,7 +12,8 @@ Simple cpp application to render an input 3d file (.off, .obj, .stl etc) as a SV
 
 ## Build
 - After installing conan, run `bash build.sh`. This will install all the requirements and build the program.
-- A statically linked binary `ink3d` will appear in the `build` folder.
+- A binary `ink3d` will appear in the `build` folder.
+- If you wish to create a statically linked bin, uncomment the lines according to the comments in `conanfile.txt`
 
 ## Usage
 ```bash
