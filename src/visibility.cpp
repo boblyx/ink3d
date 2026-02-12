@@ -4,58 +4,105 @@
 #include "common.h"
 using namespace Ink3d;
 
-bool is_point_visible_from_eye(
+bool is_point_visible(
+    ProjectionType proj,
     const Point_3& eye,
+    const Point_3& target, // NEW: look-at target, used for Orthographic
     const Point_3& p,
     const Tree& tree,
     const std::array<face_descriptor, 2>& ignore_faces,
     const double eps_rel = 1e-7,
     const double eps_abs = 1e-12
 ) {
-    Vector_3 v = p - eye;
-    double d2 = CGAL::to_double(v.squared_length());
-    if (d2 < eps_abs) return true;
+    auto is_ignored = [&](face_descriptor f) {
+        return (f == ignore_faces[0] || f == ignore_faces[1]);
+    };
 
-    double d = std::sqrt(d2);
-    double eps = std::max(eps_abs, eps_rel * d);
+    // -------------------- Perspective --------------------
+    if (proj == ProjectionType::Perspective) {
+        Vector_3 v = p - eye;
+        double d2 = CGAL::to_double(v.squared_length());
+        if (d2 < eps_abs) return true;
+
+        double d = std::sqrt(d2);
+        double eps = std::max(eps_abs, eps_rel * d);
+        double eps2 = eps * eps;
+
+        // Shorten segment to avoid hitting p itself
+        Point_3 p_shorten = eye + v * ((d - eps) / d);
+        Segment_3 seg(eye, p_shorten);
+
+        std::vector<Seg_intersection> hits;
+        tree.all_intersections(seg, std::back_inserter(hits));
+
+        for (const auto& inter : hits) {
+            face_descriptor f = inter.second;
+            if (is_ignored(f)) continue;
+
+            Point_3 ip;
+            if (const Point_3* pt = std::get_if<Point_3>(&inter.first)) {
+                ip = *pt;
+            } else if (const Segment_3* s = std::get_if<Segment_3>(&inter.first)) {
+                double a2 = CGAL::to_double((s->source() - eye).squared_length());
+                double b2 = CGAL::to_double((s->target() - eye).squared_length());
+                ip = (a2 < b2) ? s->source() : s->target();
+            } else {
+                continue;
+            }
+
+            double t2 = CGAL::to_double((ip - eye).squared_length());
+            if (t2 > eps2) return false; // occluder found
+        }
+        return true;
+    }
+
+    // -------------------- Orthographic --------------------
+    // Compute constant direction toward the camera from eye/target.
+    // Camera forward = normalize(target - eye)
+    // Rays toward camera = normalize(eye - target)
+    Vector_3 dir = eye - target;
+    double dir2 = CGAL::to_double(dir.squared_length());
+    if (dir2 < eps_abs) {
+        // eye == target => undefined direction
+        return true; // or assert/throw depending on your design
+    }
+    dir = dir / std::sqrt(dir2); // normalize
+
+    // World epsilon for "start nudging" and self-hit rejection
+    // (no natural distance-to-eye in ortho)
+    double eps = std::max(eps_abs, eps_rel);
     double eps2 = eps * eps;
 
-    // Shorten the segment slightly to avoid hitting the target point itself
-    Point_3 p_shorten = eye + v * ((d - eps) / d);
-    Segment_3 seg(eye, p_shorten);
+    // Start slightly toward the camera to avoid self-intersection on the face containing p
+    Point_3 p_start = p + dir * eps;
+    Ray_3 ray(p_start, dir);
 
-    std::vector<Seg_intersection> hits;
-    tree.all_intersections(seg, std::back_inserter(hits));
+    std::vector<Ray_intersection> hits; // ensure Ray_intersection matches your Tree
+    tree.all_intersections(ray, std::back_inserter(hits));
 
     for (const auto& inter : hits) {
-        // 1. Filter ignored faces (like the face the eye/point lies on)
         face_descriptor f = inter.second;
-        if (f == ignore_faces[0] || f == ignore_faces[1]) continue;
+        if (is_ignored(f)) continue;
 
-        Point_3 intersection_point;
-        
-        // 2. Use std::get_if to safely inspect the variant
+        Point_3 ip;
         if (const Point_3* pt = std::get_if<Point_3>(&inter.first)) {
-            intersection_point = *pt;
-        } 
-        else if (const Segment_3* s = std::get_if<Segment_3>(&inter.first)) {
-            // If the intersection is a segment, take the point closest to the eye
-            double a2 = CGAL::to_double((s->source() - eye).squared_length());
-            double b2 = CGAL::to_double((s->target() - eye).squared_length());
-            intersection_point = (a2 < b2) ? s->source() : s->target();
-        } 
-        else {
-            continue; 
+            ip = *pt;
+        } else if (const Segment_3* s = std::get_if<Segment_3>(&inter.first)) {
+            // closest endpoint to p_start (since there is no finite eye point)
+            double a2 = CGAL::to_double((s->source() - p_start).squared_length());
+            double b2 = CGAL::to_double((s->target() - p_start).squared_length());
+            ip = (a2 < b2) ? s->source() : s->target();
+        } else {
+            continue;
         }
 
-        // 3. Final check: is this intersection point far enough from the eye to be an obstacle?
-        double t2 = CGAL::to_double((intersection_point - eye).squared_length());
-        if (t2 > eps2) {
-            return false; // Found a valid occluder
-        }
+        double t2 = CGAL::to_double((ip - p_start).squared_length());
+        if (t2 > eps2) return false; // something blocks p along ortho ray
     }
-    return true; // No valid occluders found
+
+    return true;
 }
+
 
 bool is_point_visible_robust(
     const Point_3& eye, const Point_3& p, 
@@ -86,7 +133,9 @@ bool is_point_visible_robust(
 }
 
 std::vector<std::pair<Point_3, Point_3>> visible_subsegments_world(
+    ProjectionType proj,
     const Point_3& eye,
+    const Point_3& target,  // NEW
     const Point_3& a,
     const Point_3& b,
     const Tree& tree,
@@ -112,61 +161,46 @@ std::vector<std::pair<Point_3, Point_3>> visible_subsegments_world(
         double t = double(i) / double(samples - 1);
         ts[i] = t;
         Point_3 p = point_on(t);
-        vis[i] = is_point_visible_from_eye(eye, p, tree, ignore_faces) ? 1 : 0;
+        vis[i] = is_point_visible(proj, eye, target, p, tree, ignore_faces) ? 1 : 0;
     }
 
-    // If everything hidden or visible, handle quickly
     bool any_vis = false, any_hid = false;
     for (char v : vis) { any_vis |= (v==1); any_hid |= (v==0); }
     if (!any_vis) return out;
     if (!any_hid) { out.emplace_back(a, b); return out; }
 
-    // Helper: find boundary t where visibility flips using bisection
     auto refine_boundary = [&](double t0, double t1, bool want_visible_at_t1)->double {
         double lo = t0, hi = t1;
         for (int k = 0; k < refine_steps; ++k) {
             double mid = 0.5 * (lo + hi);
-            bool mvis = is_point_visible_from_eye(eye, point_on(mid), tree, ignore_faces);
+            bool mvis = is_point_visible(proj, eye, target, point_on(mid), tree, ignore_faces);
             if (mvis == want_visible_at_t1) hi = mid;
             else lo = mid;
         }
         return 0.5 * (lo + hi);
     };
 
-    // Walk through samples and build visible ranges [t_start, t_end]
     int i = 0;
     while (i < samples - 1) {
-        // find next visible
         while (i < samples && vis[i] == 0) i++;
         if (i >= samples) break;
 
         double t_start = ts[i];
+        if (i > 0 && vis[i-1] == 0) t_start = refine_boundary(ts[i-1], ts[i], true);
 
-        // if visibility starts in middle, refine boundary with previous sample
-        if (i > 0 && vis[i-1] == 0) {
-            t_start = refine_boundary(ts[i-1], ts[i], true);
-        }
-
-        // advance until hidden
         int j = i;
         while (j < samples && vis[j] == 1) j++;
         double t_end = ts[j-1];
 
-        // if it ends before last, refine boundary with next hidden sample
-        if (j < samples && vis[j] == 0) {
-            t_end = refine_boundary(ts[j-1], ts[j], false);
-        }
+        if (j < samples && vis[j] == 0) t_end = refine_boundary(ts[j-1], ts[j], false);
 
-        // Emit subsegment
-        if (t_end > t_start) {
-            out.emplace_back(point_on(t_start), point_on(t_end));
-        }
-
+        if (t_end > t_start) out.emplace_back(point_on(t_start), point_on(t_end));
         i = j;
     }
 
     return out;
 }
+
 
 bool is_feature_edge(edge_descriptor ed, const Mesh& mesh, const Point_3& eye, double angle_threshold_deg = 20.0) {
     halfedge_descriptor hd = halfedge(ed, mesh);

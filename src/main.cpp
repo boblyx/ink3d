@@ -58,7 +58,9 @@ int main(int argc, char* argv[]) {
 
         // compute visible parts in WORLD space
         auto parts = visible_subsegments_world(
-            eye, source, target, tree, ignore_faces,
+            cnf.projection,
+            eye, center,
+            source, target, tree, ignore_faces,
             cnf.samples , 
             cnf.refine_steps
         );

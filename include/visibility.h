@@ -3,8 +3,10 @@
 
 #include "common.h"
 
-bool is_point_visible_from_eye(
+bool is_point_visible(
+    Ink3d::ProjectionType proj,
     const Ink3d::Point_3& eye,
+    const Ink3d::Point_3& target,
     const Ink3d::Point_3& p,
     const Ink3d::Tree& tree,
     const std::array<Ink3d::face_descriptor, 2>& ignore_faces,
@@ -19,7 +21,9 @@ bool is_point_visible_robust(
 );
 
 std::vector<std::pair<Ink3d::Point_3, Ink3d::Point_3>> visible_subsegments_world(
+    Ink3d::ProjectionType proj,
     const Ink3d::Point_3& eye,
+    const Ink3d::Point_3& target,
     const Ink3d::Point_3& a,
     const Ink3d::Point_3& b,
     const Ink3d::Tree& tree,
