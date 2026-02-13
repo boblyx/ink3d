@@ -1,4 +1,5 @@
 #include "common.h"
+#include "config_structs.h"
 
 // Logic snippet for your parser
 void parseProjection(const std::string& input, Ink3d::Config& config) {

@@ -2,6 +2,7 @@
 #define VISIBLITY_H
 
 #include "common.h"
+#include "config_structs.h"
 
 bool is_point_visible(
     Ink3d::ProjectionType proj,

@@ -2,6 +2,7 @@
  * visiblity.cpp
  */
 #include "common.h"
+#include "config_structs.h"
 using namespace Ink3d;
 
 bool is_point_visible(

@@ -6,6 +6,7 @@
 #include "visibility.h"
 #include "projection.h"
 #include "config.h"
+
 using namespace Ink3d;
 
 int main(int argc, char* argv[]) {
